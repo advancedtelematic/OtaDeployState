@@ -1,6 +1,7 @@
 import Foundation
 import PromiseKit
 import SwiftyRequest
+import enum SwiftyRequest.Result
 import StateMachine
 
 public func unpacker<A: Codable>(prom: Promise<A>) -> A {
@@ -26,12 +27,7 @@ public final class AuthPlus {
         case no_clients
         case clients_created
     }
-
-    public func hasClients() -> Promise<[Client]> {
-        return .value([])
-    }
 }
-
 
 public struct Client: Codable {
     let clientId: String
@@ -42,6 +38,24 @@ public struct Client: Codable {
         case clientId = "client_id"
         case clientName = "client_name"
         case clientSecret = "client_secret"
+    }
+}
+
+public func defaultHandler<T: Codable>(seal: Resolver<T>, result: Result<T>) {
+    switch result {
+    case .success(let ret):
+        seal.fulfill(ret)
+    case .failure(let error):
+        seal.reject(error)
+    }
+}
+
+public func defaultGet<T: Codable>(url: String) -> Promise<T>  {
+    return Promise<T> { seal in
+        let request = RestRequest(method: .get, url: url)
+        request.responseObject { (response: RestResponse<T>) in
+            defaultHandler(seal: seal, result: response.result)
+        }
     }
 }
 
@@ -60,6 +74,11 @@ public class AuthPlusApi {
             }
         }
     }
+
+    public func fetchClient(clientId: String) -> Promise<Client>  {
+        return defaultGet(url: "http://localhost:8000/clients/\(clientId)") as Promise<Client>
+    }
+
 
     public enum InitialisedStatus {
         case initialised(Initialized)
