@@ -26,8 +26,24 @@ public final class AuthPlus {
         case no_clients
         case clients_created
     }
+
+    public func hasClients() -> Promise<[Client]> {
+        return .value([])
+    }
 }
 
+
+public struct Client: Codable {
+    let clientId: String
+    let clientName: String
+    let clientSecret: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case clientName = "client_name"
+        case clientSecret = "client_secret"
+    }
+}
 
 public class AuthPlusApi {
     public init() {}
