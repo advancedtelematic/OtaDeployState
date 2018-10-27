@@ -79,4 +79,20 @@ request.responseData { response in
 
 print(authPlus.machine.state)
 
+let kube = Kube()
+let fetchSecret = kube.fetchSecret(name: "auth-plus-client-app")
+
+fetchSecret.done { secret in
+    print("fetch secret done block∫")
+    print(secret)
+    print("print encoder")
+    let encoded = try! JSONEncoder().encode(secret)
+    print(String(data: encoded, encoding: .utf8))
+    print("done printing encoder")
+    }.catch {error in
+        print("fetch secret done error")
+        print(error.localizedDescription)
+        print(error)
+}
+
 sleep(10)

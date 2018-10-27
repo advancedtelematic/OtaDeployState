@@ -17,8 +17,10 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(name: "StateMachine", dependencies: []),
         .target(name: "OtaDeployState", dependencies: ["SwiftyRequest", "StateMachine", "PMKFoundation", "PromiseKit", "AuthPlus", "Kube"]),
-        .target(name: "AuthPlus", dependencies: ["SwiftyRequest", "StateMachine"]),
-        .target(name: "Kube", dependencies: ["SwiftyRequest", "StateMachine"]),
+        .target(name: "AuthPlus", dependencies: ["MiniNetwork", "SwiftyRequest", "StateMachine"]),
+        .target(name: "MiniNetwork", dependencies: ["SwiftyRequest", "PromiseKit"]),
+        .target(name: "Kube", dependencies: ["MiniNetwork", "PromiseKit"]),
+
         .testTarget(
             name: "OtaDeployStateTests",
             dependencies: ["OtaDeployState"]),

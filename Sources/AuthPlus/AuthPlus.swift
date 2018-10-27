@@ -3,6 +3,7 @@ import PromiseKit
 import SwiftyRequest
 import enum SwiftyRequest.Result
 import StateMachine
+import MiniNetwork
 
 public func unpacker<A: Codable>(prom: Promise<A>) -> A {
     do {
@@ -41,44 +42,16 @@ public struct Client: Codable {
     }
 }
 
-public func defaultHandler<T: Codable>(seal: Resolver<T>, result: Result<T>) {
-    switch result {
-    case .success(let ret):
-        seal.fulfill(ret)
-    case .failure(let error):
-        seal.reject(error)
-    }
-}
-
-public func defaultGet<T: Codable>(url: String) -> Promise<T>  {
-    return Promise<T> { seal in
-        let request = RestRequest(method: .get, url: url)
-        request.responseObject { (response: RestResponse<T>) in
-            defaultHandler(seal: seal, result: response.result)
-        }
-    }
-}
-
 public class AuthPlusApi {
+    public let baseUrl = "http://localhost:8000"
     public init() {}
     public func isInitialised() -> Promise<InitStatus>  {
-        return Promise<InitStatus> { seal in
-            let request = RestRequest(method: .get, url: "http://localhost:8000/init")
-            request.responseObject { (response: RestResponse<InitStatus>) in
-                switch response.result {
-                case .success(let initStatus):
-                    seal.fulfill(initStatus)
-                case .failure(let error):
-                    seal.reject(error)
-                }
-            }
-        }
+        return asyncGet(url: "\(baseUrl)/init") as Promise<InitStatus>
     }
 
     public func fetchClient(clientId: String) -> Promise<Client>  {
-        return defaultGet(url: "http://localhost:8000/clients/\(clientId)") as Promise<Client>
+        return asyncGet(url: "http://localhost:8000/clients/\(clientId)") as Promise<Client>
     }
-
 
     public enum InitialisedStatus {
         case initialised(Initialized)

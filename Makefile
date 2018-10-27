@@ -11,5 +11,8 @@ open-xcode:
 docker-build:
 	docker build -t ota-deploy-state .
 
+docker-run:
+	docker run --net=host --rm -it ota-deploy-state ./.build/debug/OtaDeployState
+
 docker-run-interactive:
 	docker run --net=host --privileged --rm --cap-add sys_ptrace -it ota-deploy-state bash
