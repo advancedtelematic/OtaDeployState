@@ -63,25 +63,40 @@ do {
     authPlus.machine.state = .s_unavailable
 }
 
-
+/*
 let cert = ClientCertificate(name: "ca.crt", path: "ca.crt")
+
 
 let request = RestRequest(method: .get, url: "http://127.0.0.1:8001", containsSelfSignedCert: true, clientCertificate: cert)
 
-request.responseData { response in
-    switch response.result {
-    case .success(let retval):
-        print(String(data: retval, encoding: .utf8))
-    case .failure(let error):
-        print("Failed to get data response: \(error)")
-    }
-}
+
+*/
+let requiredSecrets = [
+    "auth-plus-client-app",
+    "auth-plus-client-auditor"
+]
+
 
 print(authPlus.machine.state)
 
 let kube = Kube()
-let fetchSecret = kube.fetchSecret(name: "auth-plus-client-app")
 
+//let fetchSecret = kube.fetchSecret(name: "auth-plus-client-app")
+
+let secretPromises = requiredSecrets.map { (name) -> Promise<Kube.Secret> in
+    return kube.fetchSecret(name: name)
+}
+
+
+when(fulfilled: secretPromises).done { secrets in
+    print("in secrets")
+    print(secrets)
+}.catch { error in
+    print("in error")
+    print(error)
+}
+
+/*
 fetchSecret.done { secret in
     print("fetch secret done block∫")
     print(secret)
@@ -93,6 +108,6 @@ fetchSecret.done { secret in
         print("fetch secret done error")
         print(error.localizedDescription)
         print(error)
-}
+}*/
 
 sleep(10)

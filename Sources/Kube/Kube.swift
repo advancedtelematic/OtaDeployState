@@ -1,6 +1,7 @@
 import struct Foundation.Data
 import MiniNetwork
 import PromiseKit
+import Foundation
 
 extension String {
 
