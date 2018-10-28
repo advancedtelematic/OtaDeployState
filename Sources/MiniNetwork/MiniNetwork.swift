@@ -3,7 +3,7 @@ import PromiseKit
 import SwiftyRequest
 import enum SwiftyRequest.Result
 
-public func defaultHandler<T: Codable>(method: String, url: String, seal: Resolver<T>, result: Result<T>) {
+public func defaultHandler<T: Decodable>(method: String, url: String, seal: Resolver<T>, result: Result<T>) {
     switch result {
     case .success(let ret):
         seal.fulfill(ret)
@@ -13,7 +13,7 @@ public func defaultHandler<T: Codable>(method: String, url: String, seal: Resolv
     }
 }
 
-public func asyncGet<T: Codable>(url: String) -> Promise<T>  {
+public func asyncGet<T: Decodable>(url: String) -> Promise<T>  {
     return Promise<T> { seal in
         let request = RestRequest(method: .get, url: url)
         print("get to \(url)")

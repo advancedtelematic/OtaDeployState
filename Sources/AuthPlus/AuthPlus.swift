@@ -45,37 +45,33 @@ public struct Client: Codable {
 public class AuthPlusApi {
     public let baseUrl = "http://ota-auth-plus"
     public init() {}
-    public func isInitialised() -> Promise<InitStatus>  {
-        return asyncGet(url: "\(baseUrl)/init") as Promise<InitStatus>
+    public func fetchInitialised() -> Promise<InitialisedStatus>  {
+        return asyncGet(url: "\(baseUrl)/init") as Promise<InitialisedStatus>
     }
 
-    public func fetchClient(clientId: String) -> Promise<Client>  {
-        return asyncGet(url: "\(baseUrl)/clients/\(clientId)") as Promise<Client>
-    }
-
-    public enum InitialisedStatus {
-        case initialised(Initialized)
-        case uninitialised
-    }
-
-    public struct Initialized: Codable {
-    }
-
-    public struct InitStatus: Codable {
-        public init() {}
-        var initialized: Initialized?
-
-        public var isInitialised: InitialisedStatus {
-            if let s = initialized {
-                return InitialisedStatus.initialised(s)
-            } else {
-                return InitialisedStatus.uninitialised
-            }
-        }
+    public struct InitialisedStatus: Decodable {
+        public var initialized: Bool = false
 
         enum CodingKeys: String, CodingKey {
             case initialized = "Initialized"
         }
+
+        public init(from decoder: Decoder) {
+            do {
+                let values = try decoder.container(keyedBy: CodingKeys.self)
+                try values.decode(InitializedObj.self, forKey: .initialized)
+                self.initialized = true
+            } catch {
+                self.initialized = false
+            }
+        }
+
+        private struct InitializedObj: Codable {
+        }
+    }
+
+    public func fetchClient(clientId: String) -> Promise<Client>  {
+        return asyncGet(url: "\(baseUrl)/clients/\(clientId)") as Promise<Client>
     }
 }
 
@@ -92,7 +88,6 @@ extension AuthPlus : StateMachineDelegateProtocol{
             return .Abort
         }
     }
-
 
     public func didTransition(from: StateType, to: StateType) {
         switch to{
