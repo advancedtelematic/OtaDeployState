@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ota-deploy-state
+  labels:
+    app: ota-deploy-state
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ota-deploy-state
+  template:
+    metadata:
+      labels:
+        app: ota-deploy-state
+    spec:
+      containers:
+      - name: ota-deploy-state
+        image: advancedtelematic/ota-deploy-state
+        imagePullPolicy: Always
+        command: ["sleep"]
+        args: ["30000"]
+      - name: kubectl-proxy
+        image: advancedtelematic/kubectl
+        imagePullPolicy: Always
+        command: ["kubectl"]
+        args: ["proxy"]
+      serviceAccountName: ota-deploy-state
+      imagePullSecrets:
+       - name: docker-registry-key
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ota-deploy-state
+rules:
+- apiGroups: [""]
+  verbs: ["*"]
+  resources: ["secrets"]
+  resourceNames:
+  - auth-plus-bootstrap-token
+  - auth-plus-client-app
+  - auth-plus-client-auditor
+  - auth-plus-client-device-gateway
+  - auth-plus-client-treehub
+  - auth-plus-client-user-profile
+  - auth-plus-client-web-events
+  - auth-plus-client-tuf-reposerver
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ota-deploy-state
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ota-deploy-state
+subjects:
+- kind: ServiceAccount
+  name: ota-deploy-state
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ota-deploy-state
