@@ -43,14 +43,14 @@ public struct Client: Codable {
 }
 
 public class AuthPlusApi {
-    public let baseUrl = "http://localhost:8000"
+    public let baseUrl = "http://ota-auth-plus"
     public init() {}
     public func isInitialised() -> Promise<InitStatus>  {
         return asyncGet(url: "\(baseUrl)/init") as Promise<InitStatus>
     }
 
     public func fetchClient(clientId: String) -> Promise<Client>  {
-        return asyncGet(url: "http://localhost:8000/clients/\(clientId)") as Promise<Client>
+        return asyncGet(url: "\(baseUrl)/clients/\(clientId)") as Promise<Client>
     }
 
     public enum InitialisedStatus {
@@ -74,7 +74,7 @@ public class AuthPlusApi {
         }
 
         enum CodingKeys: String, CodingKey {
-            case initialized = "initialized"
+            case initialized = "Initialized"
         }
     }
 }

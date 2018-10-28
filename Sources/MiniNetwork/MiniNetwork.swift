@@ -1,11 +1,7 @@
+import Foundation
 import PromiseKit
 import SwiftyRequest
 import enum SwiftyRequest.Result
-import os.log
-
-// For auth requests to K8S
-let cert = ClientCertificate(name: "ca.crt", path: "ca.crt")
-let request = RestRequest(method: .get, url: "http://127.0.0.1:8001", containsSelfSignedCert: true, clientCertificate: cert)
 
 public func defaultHandler<T: Codable>(method: String, url: String, seal: Resolver<T>, result: Result<T>) {
     switch result {
