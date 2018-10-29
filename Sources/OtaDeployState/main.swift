@@ -14,37 +14,16 @@ PromiseKit.conf.Q = (map: pmkQ, return: pmkQ)
 let authPlusApi = AuthPlusApi()
 let authPlus = AuthPlus()
 
-let isInit = authPlusApi.fetchInitialised()
-print(authPlus.machine.state)
-isInit.done { initStatus in
-    print("init done block")
+authPlus.machine.state = .unknown
 
-    print(initStatus)
-    if initStatus.initialized {
-        authPlus.machine.state = .s_initialised
-    } else {
-        authPlus.machine.state = .s_uninitialised
-    }
-}.catch{ error in
-    print("init error")
-    print(error)
-    authPlus.machine.state = .s_unavailable
-}
-
-let initServer = authPlusApi.initialiseServer()
-initServer.done { initServ in
-    print(initServ)
-}.catch { error in
-    print(error)
-    print("initServ done error")
-}
-
+print("hello")
+/*
 let fetchClient = authPlusApi.fetchClient(clientId: "93a01ec8-7c6e-417b-aaf5-d2ce30d5bc29")
 fetchClient.done { client in
     print(client)
 }.catch {_ in
     print("fetch client done error")
-    authPlus.machine.state = .s_unavailable
+    authPlus.machine.state = .unavailable
 }
 
 let token = authPlusApi.createToken()
@@ -73,5 +52,5 @@ when(fulfilled: secretPromises).done { secrets in
     print("in error")
     print(error)
 }
-
+*/
 sleep(10)

@@ -25,6 +25,10 @@ public final class Kube {
         return asyncGet(url: "\(baseUrl)/api/v1/namespaces/\(namespace)/secrets/\(name)") as Promise<Secret>
     }
 
+    public func createSecret<B: Encodable>(name: String, body: B) -> Promise<Secret>  {
+        return asyncPost(url: "\(baseUrl)/api/v1/namespaces/\(namespace)/secrets/\(name)", body: body) as Promise<Secret>
+    }
+
     public struct Secret: Codable {
         public struct Metadata: Codable {
           let name: String

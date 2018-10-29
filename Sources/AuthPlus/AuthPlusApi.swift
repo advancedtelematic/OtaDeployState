@@ -15,7 +15,7 @@ public extension AuthPlusApi {
         return asyncGet(url: "\(baseUrl)/init") as Promise<InitialisedStatus>
     }
 
-    private struct initialiseBody: Encodable {
+    private struct InitialiseBody: Encodable {
         let clientName = "ota-auth-plus-admin"
         let grantTypes = ["client_credentials"]
         let scope = "client.register client.update"
@@ -28,7 +28,7 @@ public extension AuthPlusApi {
     }
 
     public func initialiseServer() -> Promise<Client>  {
-        return asyncPost(url: "\(baseUrl)/init", body: initialiseBody()) as Promise<Client>
+        return asyncPost(url: "\(baseUrl)/init", body: InitialiseBody()) as Promise<Client>
     }
 
     public struct InitialisedStatus: Decodable {
