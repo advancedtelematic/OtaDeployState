@@ -73,6 +73,25 @@ public class AuthPlusApi {
     public func fetchClient(clientId: String) -> Promise<Client>  {
         return asyncGet(url: "\(baseUrl)/clients/\(clientId)") as Promise<Client>
     }
+
+    public func createToken() -> Promise<AuthPlusToken>  {
+        let postString = "grant_type=client_credentials"
+        return asyncPostForm(url: "\(baseUrl)/token", body: postString) as Promise<AuthPlusToken>
+    }
+
+    public struct AuthPlusToken: Codable {
+        let accessToken: String
+        let expiresIn: Int
+        let scope: String
+        let tokenType: String
+
+        enum CodingKeys: String, CodingKey {
+            case accessToken = "access_token"
+            case expiresIn = "expires_in"
+            case tokenType = "token_type"
+            case scope = "scope"
+        }
+    }
 }
 
 extension AuthPlus : StateMachineDelegateProtocol{

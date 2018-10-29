@@ -22,3 +22,18 @@ public func asyncGet<T: Decodable>(url: String) -> Promise<T>  {
         }
     }
 }
+
+public func asyncPostForm<T: Decodable>(url: String, body: String) -> Promise<T>  {
+    return Promise<T> { seal in
+        let request = RestRequest(method: .post, url: url)
+        let clientId = "foo"
+        let clientSecet = "bar"
+        request.credentials = .basicAuthentication(username: clientId, password: clientSecet)
+        request.headerParameters = ["Content-Type" : "application/x-www-form-urlencoded; charset=utf-8"]
+        request.messageBody = body.data(using: .utf8)
+        print("post form to \(url)")
+        request.responseObject { (response: RestResponse<T>) in
+            defaultHandler(method: "post", url: url, seal: seal, result: response.result)
+        }
+    }
+}

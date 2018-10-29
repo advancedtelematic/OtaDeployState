@@ -17,6 +17,7 @@ let authPlus = AuthPlus()
 
 let isInit = authPlusApi.fetchInitialised()
 let fetchClient = authPlusApi.fetchClient(clientId: "93a01ec8-7c6e-417b-aaf5-d2ce30d5bc29")
+let token = authPlusApi.createToken()
 
 print(authPlus.machine.state)
 
@@ -33,6 +34,13 @@ isInit.done { initStatus in
     print("init error")
     print(error)
     authPlus.machine.state = .s_unavailable
+}
+
+token.done { token in
+    print(token)
+}.catch { error in
+    print(error)
+    print("token done error")
 }
 
 fetchClient.done { client in
