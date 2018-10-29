@@ -23,6 +23,17 @@ public func asyncGet<T: Decodable>(url: String) -> Promise<T>  {
     }
 }
 
+public func asyncPost<B: Encodable, R: Decodable>(url: String, body: B) -> Promise<R>  {
+    return Promise<R> { seal in
+        let request = RestRequest(method: .post, url: url)
+        print("post to \(url)")
+        request.messageBody = try JSONEncoder().encode(body)
+        request.responseObject { (response: RestResponse<R>) in
+            defaultHandler(method: "post", url: url, seal: seal, result: response.result)
+        }
+    }
+}
+
 public func asyncPostForm<T: Decodable>(url: String, body: String) -> Promise<T>  {
     return Promise<T> { seal in
         let request = RestRequest(method: .post, url: url)

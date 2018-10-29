@@ -11,16 +11,11 @@ import MiniNetwork
 let pmkQ = DispatchQueue(label: "pmkQ", qos: .default, attributes: .concurrent)
 PromiseKit.conf.Q = (map: pmkQ, return: pmkQ)
 
-
 let authPlusApi = AuthPlusApi()
 let authPlus = AuthPlus()
 
 let isInit = authPlusApi.fetchInitialised()
-let fetchClient = authPlusApi.fetchClient(clientId: "93a01ec8-7c6e-417b-aaf5-d2ce30d5bc29")
-let token = authPlusApi.createToken()
-
 print(authPlus.machine.state)
-
 isInit.done { initStatus in
     print("init done block")
 
@@ -36,13 +31,15 @@ isInit.done { initStatus in
     authPlus.machine.state = .s_unavailable
 }
 
-token.done { token in
-    print(token)
+let initServer = authPlusApi.initialiseServer()
+initServer.done { initServ in
+    print(initServ)
 }.catch { error in
     print(error)
-    print("token done error")
+    print("initServ done error")
 }
 
+let fetchClient = authPlusApi.fetchClient(clientId: "93a01ec8-7c6e-417b-aaf5-d2ce30d5bc29")
 fetchClient.done { client in
     print(client)
 }.catch {_ in
@@ -50,7 +47,16 @@ fetchClient.done { client in
     authPlus.machine.state = .s_unavailable
 }
 
-let requiredSecrets = [    "auth-plus-client-app",
+let token = authPlusApi.createToken()
+token.done { token in
+    print(token)
+}.catch { error in
+    print(error)
+    print("token done error")
+}
+
+let requiredSecrets = [
+    "auth-plus-client-app",
 //    "auth-plus-client-auditor"
 ]
 
