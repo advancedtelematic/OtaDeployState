@@ -1,9 +1,11 @@
 import StateMachine
 import Kube
+import PromiseKit
 
 public final class AuthPlus {
     public var machine:StateMachine<AuthPlus>!
     public let authPlusApi = AuthPlusApi()
+    public let kube = Kube()
 
     public init() {
         machine = StateMachine(initialState: .ready, delegate: self)
@@ -44,7 +46,6 @@ extension AuthPlus : StateMachineDelegateProtocol{
             print("Checking initialiased status")
             let isInit = authPlusApi.fetchInitialised()
             isInit.done { initStatus in
-                print(initStatus)
                 if initStatus.initialized {
                     self.machine.state = .initialised
                 } else {
@@ -60,12 +61,16 @@ extension AuthPlus : StateMachineDelegateProtocol{
         case .uninitialised:
             print("Auth plus uninitialised")
             print("Initialising auth plus")
-            let initServer = authPlusApi.initialiseServer()
-            initServer.done { initClient in
-                print("Initialised auth plus")
-                print(initClient)
+            firstly {
+                // TODO: Check if secret is already in k8s
+                authPlusApi.initialiseServer()
+            }.then { initClient -> Promise<Kube.Secret<AuthPlusApi.Client>> in
+                print("init credentials received")
                 print("Saving init credentials to kubernetes")
-                // TODO: save to k8s
+                return self.kube.createSecret(name: "auth-plus-init", body: initClient) as Promise<Kube.Secret<AuthPlusApi.Client>>
+            }.done { client in
+                print("saved init client to kubernetes")
+                self.machine.state = .initialised
             }.catch { error in
                 print("Error while initialising")
                 print(error)

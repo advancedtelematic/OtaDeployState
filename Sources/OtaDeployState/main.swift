@@ -1,12 +1,6 @@
 import Foundation
-import SwiftyRequest
-
 import PromiseKit
-import PMKFoundation
-
 import AuthPlus
-import Kube
-import MiniNetwork
 
 let pmkQ = DispatchQueue(label: "pmkQ", qos: .default, attributes: .concurrent)
 PromiseKit.conf.Q = (map: pmkQ, return: pmkQ)
@@ -16,7 +10,6 @@ let authPlus = AuthPlus()
 
 authPlus.machine.state = .unknown
 
-print("hello")
 /*
 let fetchClient = authPlusApi.fetchClient(clientId: "93a01ec8-7c6e-417b-aaf5-d2ce30d5bc29")
 fetchClient.done { client in
@@ -53,4 +46,6 @@ when(fulfilled: secretPromises).done { secrets in
     print(error)
 }
 */
+
+// TODO: Keep alive
 sleep(10)

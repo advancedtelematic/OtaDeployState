@@ -6,7 +6,8 @@ import StateMachine
 import MiniNetwork
 
 public struct AuthPlusApi {
-    public let baseUrl = "http://ota-auth-plus"
+    // public let baseUrl = "http://ota-auth-plus"
+    public let baseUrl = "http://auth-plus.london.staging.internal.atsgarage.com"
     public init() {}
 }
 
@@ -32,7 +33,7 @@ public extension AuthPlusApi {
     }
 
     public struct InitialisedStatus: Decodable {
-        public var initialized: Bool = false
+        public let initialized: Bool
 
         enum CodingKeys: String, CodingKey {
             case initialized = "Initialized"
@@ -89,5 +90,44 @@ public extension AuthPlusApi {
             case clientName = "client_name"
             case clientSecret = "client_secret"
         }
+
+        public init(clientId: String, clientSecret: String, clientName: String) {
+            self.clientId = clientId
+            self.clientSecret = clientSecret
+            self.clientName = clientName
+        }
+
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            // TODO: DRY up
+            let clientIdString = try values.decode(String.self, forKey: .clientId)
+            self.clientId = clientIdString.fromBase64() ?? clientIdString
+
+            let clientSecretString = try values.decode(String.self, forKey: .clientSecret)
+            self.clientSecret = clientSecretString.fromBase64() ?? clientSecretString
+
+            let clientNameString = try values.decode(String.self, forKey: .clientName)
+            self.clientName = clientNameString.fromBase64() ?? clientNameString
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(clientId.toBase64(), forKey: .clientId)
+            try container.encode(clientSecret.toBase64(), forKey: .clientSecret)
+            try container.encode(clientName.toBase64(), forKey: .clientName)
+        }
+    }
+}
+
+extension String {
+    func fromBase64() -> String? {
+        guard let data = Data(base64Encoded: self) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
+    func toBase64() -> String {
+        return Data(self.utf8).base64EncodedString()
     }
 }
