@@ -5,10 +5,21 @@ import enum SwiftyRequest.Result
 import StateMachine
 import MiniNetwork
 
-public struct AuthPlusApi {
-    // public let baseUrl = "http://ota-auth-plus"
-    public let baseUrl = "http://auth-plus.london.staging.internal.atsgarage.com"
-    public init() {}
+public struct AuthPlusHttpError: MiniNetworkError {
+    public let code: Int?
+    public let details: Error
+}
+
+public class AuthPlusApi: MiniNetwork {
+    public let baseUrl = "http://ota-auth-plus"
+    public var token: AuthPlusToken?
+    public var adminClient: Client?
+
+    public override init() {}
+    
+    override public func errorObj(code: Int?, details: Error) -> MiniNetworkError {
+        return AuthPlusHttpError(code: code, details: details)
+    }
 }
 
 public extension AuthPlusApi {
@@ -16,10 +27,10 @@ public extension AuthPlusApi {
         return asyncGet(url: "\(baseUrl)/init") as Promise<InitialisedStatus>
     }
 
-    private struct InitialiseBody: Encodable {
-        let clientName = "ota-auth-plus-admin"
-        let grantTypes = ["client_credentials"]
-        let scope = "client.register client.update"
+    public struct ClientMetadata: Codable {
+        let clientName: String
+        let grantTypes: [String]
+        let scope: String
 
         enum CodingKeys: String, CodingKey {
             case clientName = "client_name"
@@ -29,7 +40,10 @@ public extension AuthPlusApi {
     }
 
     public func initialiseServer() -> Promise<Client>  {
-        return asyncPost(url: "\(baseUrl)/init", body: InitialiseBody()) as Promise<Client>
+        let clientMetadata = ClientMetadata(clientName: "ota-auth-plus-admin",
+                                            grantTypes: ["client_credentials"],
+                                            scope: "client.register client.update")
+        return asyncPost(url: "\(baseUrl)/init", body: clientMetadata) as Promise<Client>
     }
 
     public struct InitialisedStatus: Decodable {
@@ -42,7 +56,7 @@ public extension AuthPlusApi {
         public init(from decoder: Decoder) {
             do {
                 let values = try decoder.container(keyedBy: CodingKeys.self)
-                try values.decode(InitializedObj.self, forKey: .initialized)
+                _ = try values.decode(InitializedObj.self, forKey: .initialized)
                 self.initialized = true
             } catch {
                 self.initialized = false
@@ -55,13 +69,13 @@ public extension AuthPlusApi {
 }
 
 public extension AuthPlusApi {
-    public func createToken() -> Promise<AuthPlusToken>  {
+    public func createToken(for client: Client) -> Promise<AuthPlusToken>  {
         let postString = "grant_type=client_credentials"
-        return asyncPostForm(url: "\(baseUrl)/token", body: postString) as Promise<AuthPlusToken>
+        return asyncPostForm(url: "\(baseUrl)/token", body: postString, clientId: client.clientId, clientSecret: client.clientSecret) as Promise<AuthPlusToken>
     }
 
     public struct AuthPlusToken: Codable {
-        let accessToken: String
+        public let accessToken: String
         let expiresIn: Int
         let scope: String
         let tokenType: String
@@ -77,7 +91,11 @@ public extension AuthPlusApi {
 
 public extension AuthPlusApi {
     public func fetchClient(clientId: String) -> Promise<Client>  {
-        return asyncGet(url: "\(baseUrl)/clients/\(clientId)") as Promise<Client>
+        return asyncGet(url: "\(baseUrl)/clients/\(clientId)", token: token?.accessToken) as Promise<Client>
+    }
+
+    public func create(client: ClientMetadata) -> Promise<Client>  {
+        return asyncPost(url: "\(baseUrl)/clients", body: client, token: token?.accessToken) as Promise<Client>
     }
 
     public struct Client: Codable {
