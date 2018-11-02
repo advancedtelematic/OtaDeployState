@@ -11,15 +11,6 @@
         }
       },
       {
-        "package": "PMKFoundation",
-        "repositoryURL": "https://github.com/PromiseKit/Foundation.git",
-        "state": {
-          "branch": null,
-          "revision": "9e1d760fdc120f1be41ee2bc026b70ce78ea19bb",
-          "version": "3.3.0"
-        }
-      },
-      {
         "package": "LoggerAPI",
         "repositoryURL": "https://github.com/IBM-Swift/LoggerAPI.git",
         "state": {
@@ -38,21 +29,21 @@
         }
       },
       {
+        "package": "SwiftDotEnv",
+        "repositoryURL": "https://github.com/SwiftOnTheServer/SwiftDotEnv.git",
+        "state": {
+          "branch": null,
+          "revision": "2a7527210766fc726fb3d26fa9b8f295841e73df",
+          "version": "2.0.1"
+        }
+      },
+      {
         "package": "SwiftyRequest",
         "repositoryURL": "https://github.com/IBM-Swift/SwiftyRequest.git",
         "state": {
           "branch": "master",
           "revision": "4f6584cefffa263bf19c9ff58d0dcbb937f7fb23",
           "version": null
-        }
-      },
-      {
-        "package": "XCGLogger",
-        "repositoryURL": "https://github.com/DaveWoodCom/XCGLogger.git",
-        "state": {
-          "branch": null,
-          "revision": "1439885a7c6ac43cdec1bf96b83a0cbdb489244d",
-          "version": "6.1.0"
         }
       }
     ]

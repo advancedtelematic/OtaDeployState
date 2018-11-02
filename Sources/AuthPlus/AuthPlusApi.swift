@@ -1,8 +1,5 @@
 import Foundation
 import PromiseKit
-import SwiftyRequest
-import enum SwiftyRequest.Result
-import StateMachine
 import MiniNetwork
 
 public struct AuthPlusHttpError: MiniNetworkError {
@@ -11,7 +8,7 @@ public struct AuthPlusHttpError: MiniNetworkError {
 }
 
 public class AuthPlusApi: MiniNetwork {
-    public let baseUrl = "http://ota-auth-plus"
+    public let baseUrl = getEnvironmentVar("AUTH_PLUS_URL") ?? "http://ota-auth-plus"
     public var token: AuthPlusToken?
     public var adminClient: Client?
 

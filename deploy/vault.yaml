@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ota-vault-test
+  labels:
+    createdBy: "OtaDeployState"
+    app: ota-vault-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ota-vault-test
+  template:
+    metadata:
+      labels:
+        createdBy: "OtaDeployState"
+        app: ota-vault-test
+    spec:
+      containers:
+      - name: ota-vault-test
+        image: vault:0.6.5
+        imagePullPolicy: Always
+        args: ["server", "-config=/tmp"]
+        ports:
+        - containerPort: 8200
+        volumeMounts:
+        - mountPath: /tmp
+          name: ota-vault-test
+        securityContext:
+          capabilities:
+            add:
+            - IPC_LOCK
+      volumes:
+      - name: ota-vault-test
+        configMap:
+          name: ota-vault-test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  ota-crypt-vault
+  labels:
+    createdBy: "OtaDeployState"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8200
+      protocol: TCP
+      name: http
+  selector:
+    app: ota-vault-test
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name:  ota-vault-test
+  labels:
+    createdBy: "OtaDeployState"
+data:
+  vault.json: |
+    {
+      "backend": {
+        "inmem": {
+        }
+      },
+      "listener": {
+        "tcp": {
+          "address": "0.0.0.0:8200",
+          "tls_disable": 1
+        }
+      },
+      "default_lease_ttl": "168h",
+      "max_lease_ttl": "720h"
+    }
