@@ -1,0 +1,37 @@
+[
+  {
+    "client_name": "auth-plus-client-app",
+    "grant_types": ["client_credentials", "urn:ietf:params:oauth:grant-type:jwt-bearer"],
+    "scope": "client.register token.introspect"
+  },
+  {
+    "client_name": "auth-plus-client-device-gateway",
+    "grant_types": ["urn:ietf:params:oauth:grant-type:client-certificate"],
+    "scope": "device device.register"
+  },
+  {
+    "client_name": "auth-plus-client-treehub",
+    "grant_types": ["client_credentials"],
+    "scope": "token.introspect"
+  },
+  {
+    "client_name": "auth-plus-client-tuf-reposerver",
+    "grant_types": ["client_credentials"],
+    "scope": "token.introspect"
+  },
+  {
+    "client_name": "auth-plus-client-user-profile",
+    "grant_types": ["client_credentials"],
+    "scope": "client.register token.introspect"
+  },
+  {
+    "client_name": "auth-plus-client-web-events",
+    "grant_types": ["client_credentials"],
+    "scope": "token.introspect"
+  },
+  {
+    "client_name": "auth-plus-client-api-gateway",
+    "grant_types": ["client_credentials"],
+    "scope": "token.introspect"
+  }
+]
