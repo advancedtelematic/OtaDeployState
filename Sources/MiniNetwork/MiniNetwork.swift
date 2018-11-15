@@ -21,11 +21,11 @@ open class MiniNetwork {
     }
 
     func logError(data: Data?, response: HTTPURLResponse?) {
-        if data != nil {
-            print(String(data: data!, encoding: .utf8) ?? "Failed to decode error Data")
+        if let d = data {
+            print(String(data: d, encoding: .utf8) ?? "Failed to decode error Data")
         }
-        if response != nil {
-            print(String(response!.statusCode))
+        if let r = response {
+            print(String(r.statusCode))
         }
     }
 

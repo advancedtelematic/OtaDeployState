@@ -8,7 +8,7 @@ public struct VaultHttpError: MiniNetworkError {
 }
 
 public class VaultApi: MiniNetwork {
-    public var baseUrl = "http://ota-crypt-vault"
+    public var baseUrl = "http://ota-crypt-vault" // Default value, overwriten by value in config file
     public var initCreds: VaultApi.InitCredentials?
 
     public override init() {}
@@ -54,7 +54,8 @@ public extension VaultApi {
 
             let rt = rootToken.fromBase64()
 
-            if rt != nil {
+            switch rt {
+            case .some:
                 // base64 encoded
                 self.keys = keys.map({ key in
                     return key.fromBase64() ?? "Failed to decode"
@@ -63,7 +64,7 @@ public extension VaultApi {
                     return keyBase64.fromBase64() ?? "Failed to decode"
                 })
                 self.rootToken = rootToken.fromBase64() ?? "Failed to decode"
-            } else {
+            case .none:
                 // just json
                 self.keys = keys
                 self.keysBase64 = keysBase64

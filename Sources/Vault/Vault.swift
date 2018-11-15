@@ -9,6 +9,7 @@ public final class Vault {
     public let kube = Kube()
     public var attempts = 4
     public let config: VaultConfig
+    public let initFilePath = "/usr/local/opt/ota-deploy-state/vault-init"
 
     public init(config: VaultConfig) {
         self.config = config
@@ -63,6 +64,27 @@ public final class Vault {
             self.unsealLoop(keysBase64: keysBase64, seal: seal)
         }
     }
+
+    func getInitCredentials() -> Promise<VaultApi.InitCredentials> {
+        let fm = FileManager.default
+        let url = URL(fileURLWithPath: self.initFilePath)
+        if fm.fileExists(atPath: self.initFilePath) {
+            return Promise<VaultApi.InitCredentials> { seal in
+                do {
+                    let initText = try String(contentsOf: url, encoding: .utf8)
+                    let initCreds = try JSONDecoder().decode(VaultApi.InitCredentials.self, from: initText.data(using: .utf8)!)
+                    seal.fulfill(initCreds)
+                }
+                catch {
+                    seal.reject(error)
+                }
+            }
+        } else {
+            return vaultApi.initializeServer() as Promise<VaultApi.InitCredentials>
+        }
+
+    }
+
     func createAndSaveToken(token: VaultConfig.Token) -> Promise<Kube.Secret<VaultApi.TokenK8s>> {
         return Promise<Kube.Secret<VaultApi.TokenK8s>> { seal in
             let req = VaultApi.TokenCreateRequest(period: token.period, policies: token.policies, displayName: token.displayName)
@@ -107,31 +129,53 @@ extension Vault : StateMachineDelegateProtocol{
         switch to{
         case .unknown:
             print("Vault status unknown")
-            vaultApi.fetchInitialised().done { initStatus in
-                print(initStatus)
-                if initStatus.initialized {
-                    self.machine.state = .initialised
-                } else {
-                    self.machine.state = .uninitialised
+            let fm = FileManager.default
+            if fm.fileExists(atPath: self.initFilePath) {
+                print("init credentials file found on disk")
+                self.machine.state = .uninitialised
+            } else {
+                vaultApi.fetchInitialised().done { initStatus in
+                    print(initStatus)
+                    if initStatus.initialized {
+                        self.machine.state = .initialised
+                    } else {
+                        self.machine.state = .uninitialised
+                    }
+                    }.catch { error in
+                        print(error)
+                        self.machine.state = .unavailable
                 }
-            }.catch { error in
-                print(error)
-                self.machine.state = .unavailable
             }
         case .unavailable:
             print("Vault unavailable")
         case .uninitialised:
             print("Vault uninitialised")
             print("Initialising vault")
+            let fileUrl = URL(fileURLWithPath: self.initFilePath)
             firstly {
-                vaultApi.initializeServer() as Promise<VaultApi.InitCredentials>
+                self.getInitCredentials() as Promise<VaultApi.InitCredentials>
             }.then { initCreds -> Promise<Kube.Secret<Kube.JsonBlob<VaultApi.InitCredentials>>> in
                 print("Vault successfully initialised")
                 print("Saving init credentials to k8s")
+                let text = try JSONEncoder().encode(initCreds)
+                //writing
+                do {
+                    try text.write(to: fileUrl)
+                } catch {
+                    print("Failed to write vault init credentials to disk")
+                }
                 return self.kube.updateSecretJsonBlob(name: "ota-vault-init", body: initCreds)
             }.done { saved in
                 print("Credentials saved to k8s")
                 self.machine.state = .initialised
+                print("removing init credentials file")
+                let fileManager = FileManager.default
+                do {
+                    try fileManager.removeItem(atPath: fileUrl.path)
+                }
+                catch let error as NSError {
+                    print("Could not remove file: \(error)")
+                }
             }.catch { error in
                 print(error)
             }
@@ -186,7 +230,7 @@ extension Vault : StateMachineDelegateProtocol{
                 switch mountStates {
                 case .exists(let mb):
                     print("already exists: \(mb.path)")
-                    return nil
+                    return .none
                 case .doesNotExist(let mb):
                     return self.vaultApi.createMount(mountBody: mb)
                 }
@@ -227,7 +271,7 @@ extension Vault : StateMachineDelegateProtocol{
                     if unsealStatus.sealed {
                         self.machine.state = .sealed
                     } else {
-                        self.machine.state = .creatingPolicies
+                        self.machine.state = .unsealed
                     }
                 }.catch { error in
                     print("error unsealing vault")

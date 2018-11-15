@@ -29,15 +29,6 @@
         }
       },
       {
-        "package": "SwiftDotEnv",
-        "repositoryURL": "https://github.com/SwiftOnTheServer/SwiftDotEnv.git",
-        "state": {
-          "branch": null,
-          "revision": "2a7527210766fc726fb3d26fa9b8f295841e73df",
-          "version": "2.0.1"
-        }
-      },
-      {
         "package": "SwiftyRequest",
         "repositoryURL": "https://github.com/IBM-Swift/SwiftyRequest.git",
         "state": {

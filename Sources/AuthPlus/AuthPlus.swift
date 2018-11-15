@@ -9,7 +9,7 @@ public final class AuthPlus {
     public var authPlusApi = AuthPlusApi()
     public let kube = Kube()
     public var attempts = 4
-    public var clientsConfigPath: String = "/etc/ota-deploy-state/clients.json"
+    public var clientsConfigPath: String = "/usr/local/etc/ota-deploy-state/clients.json"
 
     public init() {
         machine = StateMachine(initialState: .ready, delegate: self)

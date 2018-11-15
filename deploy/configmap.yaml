@@ -16,11 +16,11 @@ data:
           "policies": [
             {
               "name": "crypt",
-              "pathToPolicy": "/etc/ota-deploy-state/crypt.policy.hcl"
+              "pathToPolicy": "/usr/local/etc/ota-deploy-state/crypt.policy.hcl"
             },
             {
               "name": "gateway",
-              "pathToPolicy":  "/etc/ota-deploy-state/gateway.policy.hcl"
+              "pathToPolicy":  "/usr/local/etc/ota-deploy-state/gateway.policy.hcl"
             }
           ],
           "mounts": [

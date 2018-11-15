@@ -23,7 +23,7 @@ spec:
         image: advancedtelematic/ota-deploy-state
         imagePullPolicy: Always
         volumeMounts:
-        - mountPath: /etc/ota-deploy-state
+        - mountPath: /usr/local/etc/ota-deploy-state
           name: ota-deploy-state
         resources:
           limits:
