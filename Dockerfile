@@ -10,4 +10,6 @@ COPY Sources ./Sources
 
 RUN swift build -c release
 
+RUN mkdir -p /usr/local/opt/ota-deploy-state/
+
 CMD ./.build/release/OtaDeployState
