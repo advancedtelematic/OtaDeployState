@@ -15,8 +15,9 @@ let package = Package(
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(name: "StateMachine", dependencies: []),
-        .target(name: "OtaDeployState", dependencies: ["SwiftyRequest", "StateMachine", "PromiseKit", "AuthPlus", "Kube"]),
+        .target(name: "OtaDeployState", dependencies: ["SwiftyRequest", "StateMachine", "PromiseKit", "AuthPlus", "Kube", "Vault"]),
         .target(name: "AuthPlus", dependencies: ["MiniNetwork", "SwiftyRequest", "StateMachine", "Kube", "PromiseKit"]),
+        .target(name: "Vault", dependencies: ["MiniNetwork", "SwiftyRequest", "StateMachine", "Kube", "PromiseKit"]),
         .target(name: "MiniNetwork", dependencies: ["SwiftyRequest", "PromiseKit"]),
         .target(name: "Kube", dependencies: ["MiniNetwork", "PromiseKit"]),
 

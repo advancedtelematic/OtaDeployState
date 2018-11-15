@@ -1,0 +1,105 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name:  ota-deploy-state
+  labels:
+    createdBy: "OtaDeployState"
+    requiredBy: "Ota"
+data:
+  vault.json: |
+    {
+      "vaults": [
+        {
+          "name": "ota-crypt-vault",
+          "url": "http://ota-crypt-vault",
+          "policies": [
+            {
+              "name": "crypt",
+              "pathToPolicy": "/usr/local/etc/ota-deploy-state/crypt.policy.hcl"
+            },
+            {
+              "name": "gateway",
+              "pathToPolicy":  "/usr/local/etc/ota-deploy-state/gateway.policy.hcl"
+            }
+          ],
+          "mounts": [
+            {
+              "path": "/crypt/keystore",
+              "type": "generic"
+            },
+            {
+              "path": "/crypt/deviceSigningKeys",
+              "type": "generic"
+            }
+          ],
+          "tokens": [
+            {
+              "policies": ["crypt"],
+              "period": "72h",
+              "displayName": "crypt-tokens"
+            },
+            {
+              "policies": ["gateway"],
+              "period": "72h",
+              "displayName": "gateway-tokens"
+            }
+          ]
+        }
+      ]
+    }
+  clients.json: |
+    [
+      {
+        "client_name": "auth-plus-client-app",
+        "grant_types": ["client_credentials", "urn:ietf:params:oauth:grant-type:jwt-bearer"],
+        "scope": "client.register token.introspect"
+      },
+      {
+        "client_name": "auth-plus-client-device-gateway",
+        "grant_types": ["urn:ietf:params:oauth:grant-type:client-certificate"],
+        "scope": "device device.register"
+      },
+      {
+        "client_name": "auth-plus-client-treehub",
+        "grant_types": ["client_credentials"],
+        "scope": "token.introspect"
+      },
+      {
+        "client_name": "auth-plus-client-tuf-reposerver",
+        "grant_types": ["client_credentials"],
+        "scope": "token.introspect"
+      },
+      {
+        "client_name": "auth-plus-client-user-profile",
+        "grant_types": ["client_credentials"],
+        "scope": "client.register token.introspect"
+      },
+      {
+        "client_name": "auth-plus-client-web-events",
+        "grant_types": ["client_credentials"],
+        "scope": "token.introspect"
+      },
+      {
+        "client_name": "auth-plus-client-api-gateway",
+        "grant_types": ["client_credentials"],
+        "scope": "token.introspect"
+      }
+    ]
+  crypt.policy.hcl: |
+    path "crypt/keystore/*" {
+      policy = "write"
+    }
+    path "crypt/deviceSigningKeys/*" {
+      policy = "write"
+    }
+    path "sys/mounts/pkis/*" {
+      policy = "write"
+    }
+    path "pkis/crypt/*" {
+      policy = "write"
+    }
+  gateway.policy.hcl: |
+    path "crypt/keystore/*" {
+      policy = "read"
+    }

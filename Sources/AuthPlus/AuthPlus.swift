@@ -9,6 +9,7 @@ public final class AuthPlus {
     public var authPlusApi = AuthPlusApi()
     public let kube = Kube()
     public var attempts = 4
+    public var clientsConfigPath: String = "/usr/local/etc/ota-deploy-state/clients.json"
 
     public init() {
         machine = StateMachine(initialState: .ready, delegate: self)
@@ -30,14 +31,15 @@ public final class AuthPlus {
         case initTokenLost
     }
 
-    public func requiredClients(fromPath path: String) throws -> [AuthPlusApi.ClientMetadata] {
+    public func requiredClients() throws -> [AuthPlusApi.ClientMetadata] {
+        // TODO: switch to use Optional
         do {
-            let filePath = URL(fileURLWithPath: path)
+            let filePath = URL(fileURLWithPath: self.clientsConfigPath)
             let data = try Data(contentsOf: filePath)
             return try JSONDecoder().decode([AuthPlusApi.ClientMetadata].self, from: data)
         } catch let error {
             print(error)
-            throw AuthPlusError.invalidJsonConfig(file: path)
+            throw AuthPlusError.invalidJsonConfig(file: clientsConfigPath)
         }
     }
 
@@ -46,7 +48,7 @@ public final class AuthPlus {
             firstly {
                 self.authPlusApi.create(client: client) as Promise<AuthPlusApi.Client>
             }.then { client in
-                self.kube.createSecret(name: client.clientName, body: client) as Promise<Kube.Secret<AuthPlusApi.Client>>
+                self.kube.updateSecret(name: client.clientName, body: client) as Promise<Kube.Secret<AuthPlusApi.Client>>
             }.done { client in
                 seal.fulfill(client)
             }.catch { error in
@@ -115,7 +117,7 @@ extension AuthPlus : StateMachineDelegateProtocol{
             }.then { initClient -> Promise<Kube.Secret<AuthPlusApi.Client>> in
                 print("init credentials received")
                 print("Saving init credentials to kubernetes")
-                return self.kube.createSecret(name: "auth-plus-init", body: initClient) as Promise<Kube.Secret<AuthPlusApi.Client>>
+                return self.kube.updateSecret(name: "auth-plus-init", body: initClient) as Promise<Kube.Secret<AuthPlusApi.Client>>
             }.done { client in
                 print("saved init client to kubernetes")
                 self.machine.state = .initialised
@@ -175,14 +177,13 @@ extension AuthPlus : StateMachineDelegateProtocol{
             print("Auth plus initialised and clients created. Ready.")
 
         case .checkingClients:
-            let reqClients = try! self.requiredClients(fromPath: "/Users/alex/misc/OtaDeployState/clients.json")
+            let reqClients = try! self.requiredClients()
             let clientStatuses = reqClients.map({ cmd -> Promise<ClientState.State> in
                 let clientState = ClientState(kube: kube, authPlusApi: authPlusApi)
                 return clientState.checkState(clientMetadata: cmd)
             })
 
             when(fulfilled: clientStatuses).done { states in
-                // TODO: only create if needed
                 self.machine.state = .creatingClients(states)
             }.catch {error in
                 print("Error checking clients status")

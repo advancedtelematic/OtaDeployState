@@ -4,6 +4,8 @@ metadata:
   name: ota-deploy-state
   labels:
     app: ota-deploy-state
+    createdBy: "OtaDeployState"
+    requiredBy: "Ota"
 spec:
   replicas: 1
   selector:
@@ -13,32 +15,55 @@ spec:
     metadata:
       labels:
         app: ota-deploy-state
+        createdBy: "OtaDeployState"
+        requiredBy: "Ota"
     spec:
       containers:
       - name: ota-deploy-state
         image: advancedtelematic/ota-deploy-state
         imagePullPolicy: Always
-        command: ["sleep"]
-        args: ["30000"]
+        volumeMounts:
+        - mountPath: /usr/local/etc/ota-deploy-state
+          name: ota-deploy-state
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
       - name: kubectl-proxy
         image: advancedtelematic/kubectl
         imagePullPolicy: Always
         command: ["kubectl"]
-        args: ["proxy"]
+        args: ["proxy", "-v", "3"]
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
       serviceAccountName: ota-deploy-state
       imagePullSecrets:
        - name: docker-registry-key
+      volumes:
+      - name: ota-deploy-state
+        configMap:
+          name: ota-deploy-state
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ota-deploy-state
+  labels:
+    createdBy: "OtaDeployState"
+    requiredBy: "Ota"
 rules:
 - apiGroups: [""]
-  verbs: ["*"]
+  verbs:
+  - get
+  - delete
+  - update
+  - patch
   resources: ["secrets"]
   resourceNames:
   - auth-plus-bootstrap-token
+  - auth-plus-init
   - auth-plus-client-app
   - auth-plus-client-auditor
   - auth-plus-client-device-gateway
@@ -46,11 +71,18 @@ rules:
   - auth-plus-client-user-profile
   - auth-plus-client-web-events
   - auth-plus-client-tuf-reposerver
+  - auth-plus-client-api-gateway
+  - ota-vault-init
+  - crypt-tokens
+  - gateway-tokens
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ota-deploy-state
+  labels:
+    createdBy: "OtaDeployState"
+    requiredBy: "Ota"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -63,3 +95,6 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ota-deploy-state
+  labels:
+    createdBy: "OtaDeployState"
+    requiredBy: "Ota"
