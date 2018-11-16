@@ -152,6 +152,7 @@ extension AuthPlus : StateMachineDelegateProtocol{
                 //writing
                 do {
                     try text.write(to: fileUrl)
+                    try FileManager.default.setAttributes([FileAttributeKey.posixPermissions : UInt16(0o600)], ofItemAtPath: fileUrl.path)
                 } catch {
                     print("Failed to write vault init credentials to disk, \(error)")
                 }

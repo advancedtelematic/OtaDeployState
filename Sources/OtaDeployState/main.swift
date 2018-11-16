@@ -12,9 +12,7 @@ let vaultConfigPath = getEnvironmentVar("VAULT_CONFIG_PATH") ?? "/usr/local/etc/
 // TODO: wait for k8s better
 sleep(10)
 
-
 let pollTime = UInt32(getEnvironmentVar("POLL_TIME") ?? "600") ?? 600
-
 
 while true {
 
