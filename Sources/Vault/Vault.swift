@@ -82,7 +82,6 @@ public final class Vault {
         } else {
             return vaultApi.initializeServer() as Promise<VaultApi.InitCredentials>
         }
-
     }
 
     func createAndSaveToken(token: VaultConfig.Token) -> Promise<Kube.Secret<VaultApi.TokenK8s>> {
@@ -161,8 +160,9 @@ extension Vault : StateMachineDelegateProtocol{
                 //writing
                 do {
                     try text.write(to: fileUrl)
+                    try FileManager.default.setAttributes([FileAttributeKey.posixPermissions : UInt16(0o600)], ofItemAtPath: fileUrl.path)
                 } catch {
-                    print("Failed to write vault init credentials to disk")
+                    print("Failed to write vault init credentials to disk, \(error)")
                 }
                 return self.kube.updateSecretJsonBlob(name: "ota-vault-init", body: initCreds)
             }.done { saved in

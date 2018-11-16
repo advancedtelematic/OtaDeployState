@@ -10,6 +10,7 @@ public final class AuthPlus {
     public let kube = Kube()
     public var attempts = 4
     public var clientsConfigPath: String = "/usr/local/etc/ota-deploy-state/clients.json"
+    public let initFilePath = "/usr/local/opt/ota-deploy-state/auth-plus-init"
 
     public init() {
         machine = StateMachine(initialState: .ready, delegate: self)
@@ -70,6 +71,29 @@ public final class AuthPlus {
             }
         }
     }
+
+    func getInitCredentials() -> Promise<AuthPlusApi.Client> {
+        let fm = FileManager.default
+        let url = URL(fileURLWithPath: self.initFilePath)
+        if fm.fileExists(atPath: self.initFilePath) {
+            print("Found auth plus init credentials file")
+            return Promise<AuthPlusApi.Client> { seal in
+                do {
+                    let initText = try String(contentsOf: url, encoding: .utf8)
+                    print("printing file contents")
+                    let initCreds = try JSONDecoder().decode(AuthPlusApi.Client.self, from: initText.data(using: .utf8)!)
+                    seal.fulfill(initCreds)
+                }
+                catch {
+                    print("failed to decode auth plus credentials")
+                    seal.reject(error)
+                }
+            }
+        } else {
+            print("Auth plus file not found, initialising server")
+            return authPlusApi.initialiseServer() as Promise<AuthPlusApi.Client>
+        }
+    }
 }
 
 extension AuthPlus : StateMachineDelegateProtocol{
@@ -94,33 +118,56 @@ extension AuthPlus : StateMachineDelegateProtocol{
         case .unknown:
             print("Auth plus status unknown")
             print("Checking initialiased status")
-            let isInit = authPlusApi.fetchInitialised()
-            isInit.done { initStatus in
-                if initStatus.initialized {
-                    self.machine.state = .initialised
-                } else {
-                    self.machine.state = .uninitialised
+            let fm = FileManager.default
+            if fm.fileExists(atPath: self.initFilePath) {
+                print("init credentials file found on disk")
+                self.machine.state = .uninitialised
+            } else {
+                let isInit = authPlusApi.fetchInitialised()
+                isInit.done { initStatus in
+                    if initStatus.initialized {
+                        self.machine.state = .initialised
+                    } else {
+                        self.machine.state = .uninitialised
+                    }
+                    }.catch{ error in
+                        print("Error while checking initialiased status")
+                        print(error)
+                        self.machine.state = .unavailable
                 }
-            }.catch{ error in
-                print("Error while checking initialiased status")
-                print(error)
-                self.machine.state = .unavailable
             }
         case .unavailable:
             print("Auth plus unavailable")
         case .uninitialised:
             print("Auth plus uninitialised")
             print("Initialising auth plus")
+            let fileUrl = URL(fileURLWithPath: self.initFilePath)
             firstly {
                 // TODO: Check if secret is already in k8s
-                authPlusApi.initialiseServer()
+                self.getInitCredentials()
             }.then { initClient -> Promise<Kube.Secret<AuthPlusApi.Client>> in
-                print("init credentials received")
+                print("Auth plus init credentials received")
                 print("Saving init credentials to kubernetes")
+                let text = try JSONEncoder().encode(initClient)
+                //writing
+                do {
+                    try text.write(to: fileUrl)
+                    try FileManager.default.setAttributes([FileAttributeKey.posixPermissions : UInt16(0o600)], ofItemAtPath: fileUrl.path)
+                } catch {
+                    print("Failed to write vault init credentials to disk, \(error)")
+                }
                 return self.kube.updateSecret(name: "auth-plus-init", body: initClient) as Promise<Kube.Secret<AuthPlusApi.Client>>
             }.done { client in
                 print("saved init client to kubernetes")
                 self.machine.state = .initialised
+                print("removing init credentials file")
+                let fileManager = FileManager.default
+                do {
+                    try fileManager.removeItem(atPath: fileUrl.path)
+                }
+                catch let error as NSError {
+                    print("Could not remove file: \(error)")
+                }
             }.catch { error in
                 print("Error while initialising")
                 print(error)
