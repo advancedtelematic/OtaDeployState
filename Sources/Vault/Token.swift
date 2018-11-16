@@ -83,7 +83,6 @@ extension VaultApi {
     public func lookupToken(tokenLookupRequest: TokenLookupRequest) -> Promise<TokenLookupResponse>  {
         return asyncPost(url: "\(baseUrl)/v1/auth/token/lookup", body: tokenLookupRequest, headerParameters: ["X-Vault-Token": initCreds?.rootToken ?? ""]) as Promise<TokenLookupResponse>
     }
-
 }
 
 public struct TokenState {
