@@ -19,7 +19,7 @@ docker-run:
 		--rm \
 		-it \
 		--net=host \
-		advancedtelematic/ota-deploy-state ./.build/debug/OtaDeployState
+		advancedtelematic/ota-deploy-state
 
 docker-run-interactive:
 	docker run \
