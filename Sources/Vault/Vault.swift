@@ -2,6 +2,9 @@ import Foundation
 import StateMachine
 import Kube
 import PromiseKit
+import SwiftyBeaver
+
+let log = SwiftyBeaver.self
 
 public final class Vault {
     public var machine:StateMachine<Vault>!
@@ -47,14 +50,14 @@ public final class Vault {
         firstly {
             vaultApi.unsealPut(key: VaultApi.UnsealPayload(key: keysBase64[index]))
         }.done { status in
-            print(status)
+            log.verbose("Vault unseal status: \(status)")
             if status.sealed {
                 self.unsealLoop(keysBase64: keysBase64, index: index + 1, seal: seal)
             } else {
                 seal.fulfill(status)
             }
         }.catch { error in
-            print(error)
+            log.error("Vault unseal error: \(error)")
             seal.reject(error)
         }
     }
@@ -127,72 +130,73 @@ extension Vault : StateMachineDelegateProtocol{
     public func didTransition(from: StateType, to: StateType) {
         switch to{
         case .unknown:
-            print("Vault status unknown")
+            log.verbose("Status unknown.")
             let fm = FileManager.default
             if fm.fileExists(atPath: self.initFilePath) {
-                print("init credentials file found on disk")
+                log.info("Init credentials file found on disk.")
                 self.machine.state = .uninitialised
             } else {
                 vaultApi.fetchInitialised().done { initStatus in
-                    print(initStatus)
+                    log.verbose("Vault init status: \(initStatus.initialized)")
                     if initStatus.initialized {
                         self.machine.state = .initialised
                     } else {
                         self.machine.state = .uninitialised
                     }
                     }.catch { error in
-                        print(error)
+                        log.error("Error during get to init status: \(error)")
                         self.machine.state = .unavailable
                 }
             }
         case .unavailable:
-            print("Vault unavailable")
+            log.error("Unavailable.")
         case .uninitialised:
-            print("Vault uninitialised")
-            print("Initialising vault")
+            log.info("Uninitialised.")
+            log.info("Initialising.")
             let fileUrl = URL(fileURLWithPath: self.initFilePath)
             firstly {
                 self.getInitCredentials() as Promise<VaultApi.InitCredentials>
             }.then { initCreds -> Promise<Kube.Secret<Kube.JsonBlob<VaultApi.InitCredentials>>> in
-                print("Vault successfully initialised")
-                print("Saving init credentials to k8s")
+                log.verbose("Vault successfully initialised.")
+                log.verbose("Saving init credentials to k8s.")
                 let text = try JSONEncoder().encode(initCreds)
                 //writing
                 do {
                     try text.write(to: fileUrl)
                     try FileManager.default.setAttributes([FileAttributeKey.posixPermissions : UInt16(0o600)], ofItemAtPath: fileUrl.path)
                 } catch {
-                    print("Failed to write vault init credentials to disk, \(error)")
+                    log.error("Failed to write vault init credentials to disk: \(error)")
                 }
                 return self.kube.updateSecretJsonBlob(name: "ota-vault-init", body: initCreds)
             }.done { saved in
-                print("Credentials saved to k8s")
+                log.verbose("Credentials saved to k8s.")
                 self.machine.state = .initialised
-                print("removing init credentials file")
+                log.verbose("Removing init credentials file.")
                 let fileManager = FileManager.default
                 do {
                     try fileManager.removeItem(atPath: fileUrl.path)
                 }
                 catch let error as NSError {
-                    print("Could not remove file: \(error)")
+                    log.error("Could not remove file: \(error)")
                 }
             }.catch { error in
-                print(error)
+                log.error("Error during initialisation: \(error)")
+                self.machine.state = .unavailable
             }
         case .initialised:
-            print("Vault initialised")
-            print("Fetching credentials")
+            log.info("Initialised.")
+            log.verbose("Fetching credentials.")
             firstly {
                 self.kube.fetchSecret(name: "ota-vault-init") as Promise<Kube.Secret<Kube.JsonBlob<VaultApi.InitCredentials>>>
             }.done { (secretCreds) in
                 self.vaultApi.initCreds = secretCreds.data.blob
                 self.machine.state = .checkingSealStatus
             }.catch { error in
-                print("error while fetching vault secrets")
+                log.error("Error while fetching secrets: \(error)")
                 self.machine.state = .needsManualIntervention
             }
         case .creatingPolicies:
-            print("creating policies")
+            log.info("Creating policies.")
 
             let policies = config.policies.map { policy -> VaultApi.PolicyBody in
                 // TODO: Fix `try!`
@@ -201,13 +205,14 @@ extension Vault : StateMachineDelegateProtocol{
             when(fulfilled: policies.map { policy -> Promise<Void> in
                 vaultApi.createPolicy(policyBody: policy)
             }).done {
-                print("policies created")
+                log.info("Policies created.")
                 self.machine.state = .checkingMounts
             }.catch { error in
-                print(error)
+                log.error("Error creating policies: \(error)")
                 self.machine.state = .needsManualIntervention
             }
         case .checkingMounts:
+            log.verbose("Checking policies.")
             let mounts = config.mounts.map { mount -> VaultApi.MountBody in
                 VaultApi.MountBody(path: mount.path, type: mount.type)
             }
@@ -219,35 +224,35 @@ extension Vault : StateMachineDelegateProtocol{
             when(fulfilled: states).done { mountStates in
                 self.machine.state = .creatingMounts(mountStates)
             }.catch { error in
-                print("error checking mount states")
+                log.error("Error checking mount states: \(error)")
                 self.machine.state = .unknown
             }
 
         case .creatingMounts(let states):
-            print("creating mounts")
+            log.verbose("Creating mounts.")
 
             let creating = states.map { mountStates -> Promise<VaultApi.Mount>? in
                 switch mountStates {
                 case .exists(let mb):
-                    print("already exists: \(mb.path)")
+                    log.verbose("Already exists: \(mb.path)")
                     return .none
                 case .doesNotExist(let mb):
                     return self.vaultApi.createMount(mountBody: mb)
                 }
             }.compactMap({$0})
             when(fulfilled: creating).done { mounts in
-                print("mounts created")
+                log.verbose("Mounts created.")
                 self.machine.state = .checkingTokens
             }.catch { error in
-                print("error creating mounts")
+                log.error("Error creating mounts: \(error)")
                 self.machine.state = .unknown
             }
         case .ready:
-            print("Vault initialised, policies and mounts created. Ready.")
+            log.info("Vault initialised, policies and mounts created. Ready.")
         case .needsManualIntervention:
-            print("Something's very wrong. Needs manual intervention.")
+            log.error("Something's very wrong. Needs manual intervention.")
         case .checkingSealStatus:
-            print("Checking sealed status")
+            log.verbose("Checking sealed status.")
             firstly {
                 vaultApi.fetchSealStatus()
             }.done { status in
@@ -257,11 +262,11 @@ extension Vault : StateMachineDelegateProtocol{
                     self.machine.state = .unsealed
                 }
             }.catch { error in
-                print("error checking seal status")
+                log.error("Error checking seal status.")
                 self.machine.state = .unknown
             }
         case .sealed:
-            print("Vault is sealed. Unsealing")
+            log.info("Vault is sealed. Unsealing.")
             // TODO add unseal attempts
             switch self.vaultApi.initCreds {
             case .some(let creds):
@@ -274,54 +279,53 @@ extension Vault : StateMachineDelegateProtocol{
                         self.machine.state = .unsealed
                     }
                 }.catch { error in
-                    print("error unsealing vault")
+                    log.error("Error unsealing vault.")
                     self.machine.state = .needsManualIntervention
                 }
             case .none:
+                log.error("Vault initialisation credentials not found.")
                 self.machine.state = .unknown
             }
         case .unsealed:
-            print("Unsealed.")
+            log.info("Unsealed.")
             self.machine.state = .creatingPolicies
         case .checkingTokens:
-            print("checking tokens")
+            log.verbose("Checking tokens.")
             let states = config.tokens.map { token -> Promise<TokenState.State> in
                 return TokenState.init(kube: self.kube, vaultApi: self.vaultApi).checkTokenState(token: token)
             }
             when(fulfilled: states).done { states in
                 self.machine.state = .creatingTokens(states)
             }.catch { error in
-                print("error checking states")
-                print(error)
+                log.error("Error checking states: \(error)")
                 self.machine.state = .unknown
             }
         case .creatingTokens(let states):
-            print("creating tokens")
+            log.info("Creating tokens.")
 
             let creating = states.map { state -> Promise<Kube.Secret<VaultApi.TokenK8s>>? in
                 switch state {
                 case .exists(let token):
-                    print("\(token.displayName) already exists")
+                    log.verbose("\(token.displayName) already exists.")
                     return .none
                 case .doesNotExist(let token):
-                    print("\(token.displayName) does not exist, creating")
+                    log.verbose("\(token.displayName) does not exist, creating.")
                     return self.createAndSaveToken(token: token)
                 case .expiring(let token):
-                    print("\(token.displayName) is expiring, recreating")
+                    log.verbose("\(token.displayName) is expiring, recreating.")
                     return self.recreateToken(token: token)
                 case .ink8sOnly(let token):
-                    print("\(token.displayName) is only in k8s and not vault, recreating")
+                    log.verbose("\(token.displayName) is only in k8s and not vault, recreating.")
                     return self.recreateToken(token: token)
                 }
             }.compactMap({ $0 })
 
 
             when(fulfilled: creating).done { createResponses in
-                print("tokens created")
+                log.verbose("Tokens created.")
                 self.machine.state = .ready
             }.catch { error in
-                print("error creating token")
-                print(error)
+                log.error("Error creating token: \(error)")
                 self.machine.state = .needsManualIntervention
             }
         }

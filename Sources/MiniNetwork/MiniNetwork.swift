@@ -2,7 +2,9 @@ import Foundation
 import PromiseKit
 import SwiftyRequest
 import enum SwiftyRequest.Result
+import SwiftyBeaver
 
+let log = SwiftyBeaver.self
 
 public protocol MiniNetworkError: Error {
     var details: Error { get }
@@ -20,12 +22,13 @@ open class MiniNetwork {
         return ErrorObject(code: code, details: details)
     }
 
-    func logError(data: Data?, response: HTTPURLResponse?) {
-        if let d = data {
-            print(String(data: d, encoding: .utf8) ?? "Failed to decode error Data")
-        }
+    func logError(method: String, url: String, data: Data?, response: HTTPURLResponse?) {
+        log.error("Error during \(method) to \(url)")
         if let r = response {
-            print(String(r.statusCode))
+            log.error(String(r.statusCode))
+        }
+        if let d = data {
+            log.debug(String(data: d, encoding: .utf8) ?? "Failed to decode error Data")
         }
     }
 
@@ -34,8 +37,7 @@ open class MiniNetwork {
         case .success(let ret):
             seal.fulfill(ret)
         case .failure(let error):
-            print("error during \(method) to \(url)")
-            logError(data: response.data, response: response.response)
+            logError(method: method, url: url, data: response.data, response: response.response)
             seal.reject(errorObj(code: response.response?.statusCode, details: error))
         }
     }
@@ -45,8 +47,7 @@ open class MiniNetwork {
         case .success(_):
             seal.fulfill(Void())
         case .failure(let error):
-            print("error during \(method) to \(url)")
-            logError(data: response.data, response: response.response)
+            logError(method: method, url: url, data: response.data, response: response.response)
             seal.reject(errorObj(code: response.response?.statusCode, details: error))
         }
     }
@@ -54,7 +55,7 @@ open class MiniNetwork {
     public func asyncGet<T: Decodable>(url: String, token: String? = nil, headerParameters: [String: String]? = nil) -> Promise<T>  {
         return Promise<T> { seal in
             let request = RestRequest(method: .get, url: url)
-            print("get to \(url)")
+            log.debug("GET to \(url)")
             if token != nil {
                 request.credentials = .bearerAuthentication(token: token!)
             }
@@ -83,7 +84,7 @@ open class MiniNetwork {
         return attempt {
             return Promise<R> { seal in
                 let request = RestRequest(method: method, url: url)
-                print("\(method) to \(url)")
+                log.debug("\(method) to \(url)")
                 request.messageBody = try JSONEncoder().encode(body)
                 if token != nil {
                     request.credentials = .bearerAuthentication(token: token!)
@@ -91,7 +92,6 @@ open class MiniNetwork {
                 if headerParameters != nil {
                     request.headerParameters = headerParameters!
                 }
-                // print(String(data: request.messageBody!, encoding: .utf8) ?? "Data encoding failed for \(body)")
                 request.responseObject { (response: RestResponse<R>) in
                     self.defaultHandler(method: method.rawValue, url: url, seal: seal, response: response)
                 }
@@ -103,7 +103,7 @@ open class MiniNetwork {
         return attempt {
             return Promise<Void> { seal in
                 let request = RestRequest(method: method, url: url)
-                print("\(method) to \(url)")
+                log.debug("\(method) to \(url)")
                 request.messageBody = try JSONEncoder().encode(body)
                 if token != nil {
                     request.credentials = .bearerAuthentication(token: token!)
@@ -111,7 +111,6 @@ open class MiniNetwork {
                 if headerParameters != nil {
                     request.headerParameters = headerParameters!
                 }
-                // print(String(data: request.messageBody!, encoding: .utf8) ?? "Data encoding failed for \(body)")
                 request.responseVoid(completionHandler: { (reponse: RestResponse<Void>) in
                     self.voidHandler(method: method.rawValue, url: url, seal: seal, response: reponse)
                 })
@@ -126,7 +125,7 @@ open class MiniNetwork {
             request.credentials = .basicAuthentication(username: clientId, password: clientSecret)
             request.headerParameters = ["Content-Type" : "application/x-www-form-urlencoded; charset=utf-8"]
             request.messageBody = body.data(using: .utf8)
-            print("post form to \(url)")
+            log.debug("POST form to \(url)")
             request.responseObject { (response: RestResponse<T>) in
                 self.defaultHandler(method: "post", url: url, seal: seal, response: response)
             }
@@ -158,9 +157,10 @@ func attempt<T>(maximumRetryCount: Int = 3, delayBeforeRetry: DispatchTimeInterv
         attempts += 1
         return body().recover { error -> Promise<T> in
             guard attempts < maximumRetryCount else { throw error }
-            print("retrying")
+            log.debug("Retrying.")
             return after(delayBeforeRetry).then(on: nil, attempt)
         }
     }
     return attempt()
 }
+

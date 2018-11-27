@@ -1,5 +1,6 @@
 import PromiseKit
 import Kube
+import SwiftyBeaver
 
 extension VaultApi {
     public struct TokenK8s: Codable {
@@ -116,13 +117,13 @@ public struct TokenState {
             }).catch({ (error) in
                 switch error {
                 case is VaultHttpError:
-                    print("some vault error")
+                    log.verbose("Vault error during token state check: \(error)")
                     seal.fulfill(State.ink8sOnly(token))
                 case is KubeHttpError:
-                    print("some kube error")
+                    log.verbose("Kube error during token state check: \(error)")
                     seal.fulfill(State.doesNotExist(token))
                 default:
-                    print("some other error")
+                    log.error("Error during token state check: \(error)")
                     seal.reject(error)
                 }
             })

@@ -27,13 +27,13 @@ public struct ClientState {
             }).catch({ (error) in
                 switch error {
                 case is AuthPlusHttpError:
-                    print("some auth plus error")
+                    log.verbose("Auth plus error during client state check: \(error)")
                     seal.fulfill(State.inK8sOnly(clientMetadata))
                 case is KubeHttpError:
-                    print("some kube error")
+                    log.verbose("kube error during client state check: \(error)")
                     seal.fulfill(State.doesNotExist(clientMetadata))
                 default:
-                    print("some other error")
+                    log.error("Error during client state check: \(error)")
                     seal.reject(error)
                 }
             })

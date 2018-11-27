@@ -19,6 +19,7 @@ docker-run:
 		--rm \
 		-it \
 		--net=host \
+		-v /usr/local/etc/ota-deploy-state:/usr/local/etc/ota-deploy-state \
 		advancedtelematic/ota-deploy-state
 
 docker-run-interactive:
@@ -26,6 +27,7 @@ docker-run-interactive:
 		-it \
 		--net=host \
 		--rm \
+		-v /usr/local/etc/ota-deploy-state:/usr/local/etc/ota-deploy-state \
 		--privileged --cap-add sys_ptrace \
 		advancedtelematic/ota-deploy-state bash
 
