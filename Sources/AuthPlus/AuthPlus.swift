@@ -3,6 +3,9 @@ import Kube
 import PromiseKit
 import Foundation
 import func PromiseKit.firstly
+import SwiftyBeaver
+
+let log = SwiftyBeaver.self
 
 public final class AuthPlus {
     public var machine:StateMachine<AuthPlus>!
@@ -39,7 +42,7 @@ public final class AuthPlus {
             let data = try Data(contentsOf: filePath)
             return try JSONDecoder().decode([AuthPlusApi.ClientMetadata].self, from: data)
         } catch let error {
-            print(error)
+            log.error("Error reading required clients file: \(error)")
             throw AuthPlusError.invalidJsonConfig(file: clientsConfigPath)
         }
     }
@@ -76,21 +79,20 @@ public final class AuthPlus {
         let fm = FileManager.default
         let url = URL(fileURLWithPath: self.initFilePath)
         if fm.fileExists(atPath: self.initFilePath) {
-            print("Found auth plus init credentials file")
+            log.info("Found auth plus init credentials file.")
             return Promise<AuthPlusApi.Client> { seal in
                 do {
                     let initText = try String(contentsOf: url, encoding: .utf8)
-                    print("printing file contents")
                     let initCreds = try JSONDecoder().decode(AuthPlusApi.Client.self, from: initText.data(using: .utf8)!)
                     seal.fulfill(initCreds)
                 }
                 catch {
-                    print("failed to decode auth plus credentials")
+                    log.error("Failed to decode auth plus credentials.")
                     seal.reject(error)
                 }
             }
         } else {
-            print("Auth plus file not found, initialising server")
+            log.error("Auth plus file not found, initialising server.")
             return authPlusApi.initialiseServer() as Promise<AuthPlusApi.Client>
         }
     }
@@ -116,11 +118,11 @@ extension AuthPlus : StateMachineDelegateProtocol{
     public func didTransition(from: StateType, to: StateType) {
         switch to{
         case .unknown:
-            print("Auth plus status unknown")
-            print("Checking initialiased status")
+            log.verbose("Auth plus status unknown.")
+            log.verbose("Checking initialiased status.")
             let fm = FileManager.default
             if fm.fileExists(atPath: self.initFilePath) {
-                print("init credentials file found on disk")
+                log.info("Init credentials file found on disk.")
                 self.machine.state = .uninitialised
             } else {
                 let isInit = authPlusApi.fetchInitialised()
@@ -131,86 +133,82 @@ extension AuthPlus : StateMachineDelegateProtocol{
                         self.machine.state = .uninitialised
                     }
                     }.catch{ error in
-                        print("Error while checking initialiased status")
-                        print(error)
+                        log.error("Error while checking initialiased status: \(error)")
                         self.machine.state = .unavailable
                 }
             }
         case .unavailable:
-            print("Auth plus unavailable")
+            log.error("Auth plus unavailable.")
         case .uninitialised:
-            print("Auth plus uninitialised")
-            print("Initialising auth plus")
+            log.info("Auth plus uninitialised.")
+            log.verbose("Initialising auth plus.")
             let fileUrl = URL(fileURLWithPath: self.initFilePath)
             firstly {
                 // TODO: Check if secret is already in k8s
                 self.getInitCredentials()
             }.then { initClient -> Promise<Kube.Secret<AuthPlusApi.Client>> in
-                print("Auth plus init credentials received")
-                print("Saving init credentials to kubernetes")
+                log.verbose("Auth plus init credentials received.")
+                log.verbose("Saving init credentials to kubernetes.")
                 let text = try JSONEncoder().encode(initClient)
                 //writing
                 do {
                     try text.write(to: fileUrl)
                     try FileManager.default.setAttributes([FileAttributeKey.posixPermissions : UInt16(0o600)], ofItemAtPath: fileUrl.path)
                 } catch {
-                    print("Failed to write vault init credentials to disk, \(error)")
+                    log.error("Failed to write vault init credentials to disk, \(error)")
                 }
                 return self.kube.updateSecret(name: "auth-plus-init", body: initClient) as Promise<Kube.Secret<AuthPlusApi.Client>>
             }.done { client in
-                print("saved init client to kubernetes")
+                log.verbose("Saved init client to kubernetes.")
                 self.machine.state = .initialised
-                print("removing init credentials file")
+                log.debug("Removing init credentials file.")
                 let fileManager = FileManager.default
                 do {
                     try fileManager.removeItem(atPath: fileUrl.path)
                 }
                 catch let error as NSError {
-                    print("Could not remove file: \(error)")
+                    log.error("Could not remove file: \(error)")
                 }
             }.catch { error in
-                print("Error while initialising")
-                print(error)
+                log.error("Error while initialising: \(error)")
                 self.machine.state = .needsManualIntervention
             }
         case .initialised:
-            print("Auth plus initialised")
-            print("Configuring auth plus credentials")
+            log.info("Auth plus initialised.")
+            log.debug("Configuring auth plus credentials.")
             firstly {
                 kube.fetchSecret(name: "auth-plus-init") as Promise<Kube.Secret<AuthPlusApi.Client>>
             }.then { client -> Promise<AuthPlusApi.AuthPlusToken> in
                 self.authPlusApi.adminClient = client.data
                 return self.authPlusApi.createToken(for: client.data) as Promise<AuthPlusApi.AuthPlusToken>
             }.done { token in
-                print("Created bearer token")
+                log.info("Created bearer token.")
                 self.authPlusApi.token = token
                 self.machine.state = .checkingClients
             }.catch { error in
-                print("Error getting auth credentials")
-                print(error)
+                log.error("Error getting auth credentials: \(error)")
                 self.machine.state = .needsManualIntervention
             }
         case .creatingClients(let states):
-            print("creating clients")
+            log.verbose("Creating clients.")
             let creating = states.map { (state) -> Promise<Kube.Secret<AuthPlusApi.Client>>? in
                 switch state {
                 case .created(let clientMd):
-                    print("already created: \(clientMd.clientName)")
+                    log.verbose("Already created: \(clientMd.clientName)")
                     return nil
                 case .doesNotExist(let clientMd):
-                    print("\(clientMd.clientName) doesn't exist. Creating.")
+                    log.verbose("\(clientMd.clientName) doesn't exist. Creating.")
                     return self.createAndSave(client: clientMd)
                 case .inK8sOnly(let clientMd):
-                    print("\(clientMd.clientName) only exists in k8s. Recreating.")
+                    log.verbose("\(clientMd.clientName) only exists in k8s. Recreating.")
                     return self.createAndUpdate(client: clientMd)
                 }
             }.compactMap { $0 }
             when(fulfilled: creating).done { kubeClients in
-                print("all created sucessfully")
+                log.info("All clients created sucessfully.")
                 self.machine.state = .ready
             }.catch { error in
-                print("error creating some clients")
-                print(error)
+                log.error("Error creating some clients: \(error)")
                 if self.attempts > 0 {
                     self.attempts -= 1
                     self.machine.state = .checkingClients
@@ -219,9 +217,9 @@ extension AuthPlus : StateMachineDelegateProtocol{
                 }
             }
         case .needsManualIntervention:
-             print("Something's very wrong. Needs manual intervention.")
+            log.error("Something's very wrong. Needs manual intervention.")
         case .ready:
-            print("Auth plus initialised and clients created. Ready.")
+            log.info("Auth plus initialised and clients created. Ready.")
 
         case .checkingClients:
             let reqClients = try! self.requiredClients()
@@ -233,8 +231,7 @@ extension AuthPlus : StateMachineDelegateProtocol{
             when(fulfilled: clientStatuses).done { states in
                 self.machine.state = .creatingClients(states)
             }.catch {error in
-                print("Error checking clients status")
-                print(error)
+                log.error("Error checking clients status: \(error)")
                 self.machine.state = .needsManualIntervention
             }
         }

@@ -4,10 +4,10 @@ Checks the state of Auth Plus and Vault and configures them if needed.
 
 ## Env vars
 
-`AUTH_PLUS_URL`: "http://ota-auth-plus"
-`VAULT_CONFIG_PATH`: "/tmp/vault.json"
-`AUTH_PLUS_CONFIG_PATH`: "/tmp/clients.json"
-`POLL_TIME`: `600`, how often the ota state is checked
+- `AUTH_PLUS_URL`: "http://ota-auth-plus"
+- `VAULT_CONFIG_PATH`: "/tmp/vault.json"
+- `AUTH_PLUS_CONFIG_PATH`: "/tmp/clients.json"
+- `POLL_TIME`: `600`, how often the ota state is checked
 
 ## Limitations
 
