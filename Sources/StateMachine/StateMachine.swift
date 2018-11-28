@@ -1,5 +1,8 @@
 import Foundation
 
+// https://www.figure.ink/blog/2015/2/9/swift-state-machines-part-4-redirect
+// https://gist.github.com/jemmons/f30f1de292751da0f1b7
+
 public class StateMachine<P:StateMachineDelegateProtocol>{
   private unowned let delegate:P
 
@@ -17,14 +20,14 @@ public class StateMachine<P:StateMachineDelegateProtocol>{
         delegateTransition(to: newValue)
     }
   }
-  
-  
+
+
   public init(initialState:P.StateType, delegate:P){
     _state = initialState //set the primitive to avoid calling the delegate.
     self.delegate = delegate
   }
-  
-  
+
+
   private func delegateTransition(to:P.StateType){
     switch delegate.shouldTransition(from: _state, to:to){
     case .Continue:

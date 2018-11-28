@@ -2,6 +2,7 @@ FROM ibmcom/swift-ubuntu:latest as builder
 
 WORKDIR /opt/OtaDeployState
 
+COPY LICENSE .
 COPY README.md .
 COPY Tests ./Tests
 COPY Package.swift .
