@@ -89,7 +89,7 @@ public final class Vault {
 
     func createAndSaveToken(token: VaultConfig.Token) -> Promise<Kube.Secret<VaultApi.TokenK8s>> {
         return Promise<Kube.Secret<VaultApi.TokenK8s>> { seal in
-            let req = VaultApi.TokenCreateRequest(period: token.period, policies: token.policies, displayName: token.displayName)
+            let req = VaultApi.TokenCreateRequest(period: token.period, policies: token.policies, displayName: token.displayName, id: UUID().uuidString)
             self.vaultApi.createToken(tokenCreateRequest: req)
                 .then({ tokenResponse -> Promise<Kube.Secret<VaultApi.TokenK8s>> in
                 self.kube.updateSecret(name: token.displayName, body: VaultApi.TokenK8s(token: tokenResponse.auth.clientToken))
