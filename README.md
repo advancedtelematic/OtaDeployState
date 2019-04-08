@@ -8,6 +8,7 @@ Checks the state of Auth Plus and Vault and configures them if needed.
 - `VAULT_CONFIG_PATH`: "/tmp/vault.json"
 - `AUTH_PLUS_CONFIG_PATH`: "/tmp/clients.json"
 - `POLL_TIME`: `600`, how often the ota state is checked
+- `KUBE_NAMESPACE`: `default`, the kubernetes namespace where ota is deployed
 
 ## Limitations
 
