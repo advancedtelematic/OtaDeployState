@@ -1,4 +1,7 @@
 .PHONY: build
+
+VERSION=0.3.0
+
 build:
 	swift build
 
@@ -9,10 +12,10 @@ open-xcode:
 	open OtaDeployState.xcodeproj
 
 docker-build:
-	docker build -t advancedtelematic/ota-deploy-state .
+	docker build -t advancedtelematic/ota-deploy-state:$(VERSION) .
 
 docker-push:
-	docker push advancedtelematic/ota-deploy-state
+	docker push advancedtelematic/ota-deploy-state:$(VERSION)
 
 docker-run:
 	docker run \
@@ -20,7 +23,7 @@ docker-run:
 		-it \
 		--net=host \
 		-v /usr/local/etc/ota-deploy-state:/usr/local/etc/ota-deploy-state \
-		advancedtelematic/ota-deploy-state
+		advancedtelematic/ota-deploy-state:$(VERSION)
 
 docker-run-interactive:
 	docker run \

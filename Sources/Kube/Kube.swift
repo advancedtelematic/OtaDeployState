@@ -11,7 +11,7 @@ public struct KubeHttpError: MiniNetworkError {
 public final class Kube: MiniNetwork {
     public override init() {}
     public let baseUrl = "http://localhost:8001"
-    public let namespace = "default"
+    public let namespace = getEnvironmentVar("KUBE_NAMESPACE") ?? "default"
 
     override public func errorObj(code: Int?, details: Error) -> MiniNetworkError {
         return KubeHttpError(code: code, details: details)
