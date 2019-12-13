@@ -1,4 +1,4 @@
-FROM ibmcom/swift-ubuntu:latest as builder
+FROM swift:4.2 as builder
 
 WORKDIR /opt/OtaDeployState
 
@@ -11,7 +11,7 @@ COPY Sources ./Sources
 
 RUN swift build -c release
 
-FROM ibmcom/swift-ubuntu-runtime:latest
+FROM swift:4.2
 
 WORKDIR /opt/OtaDeployState
 COPY --from=builder /opt/OtaDeployState/.build/release/OtaDeployState ./.build/release/OtaDeployState
