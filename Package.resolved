@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/IBM-Swift/CircuitBreaker.git",
         "state": {
           "branch": null,
-          "revision": "81581e3fb094ab4879aa2c5ce54201f1dbce0a7f",
-          "version": "5.0.1"
+          "revision": "e9345aa721ca4da428777f2e953b9ad534017675",
+          "version": "5.0.3"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/IBM-Swift/LoggerAPI.git",
         "state": {
           "branch": null,
-          "revision": "5041f2673aa75d6e973d9b6bd3956bc5068387c8",
-          "version": "1.7.3"
+          "revision": "3357dd9526cdf9436fa63bb792b669e6efdc43da",
+          "version": "1.9.0"
         }
       },
       {
@@ -24,8 +24,17 @@
         "repositoryURL": "https://github.com/mxcl/PromiseKit.git",
         "state": {
           "branch": null,
-          "revision": "66bcc386163121f14ee543aa20b682973cc98dd7",
-          "version": "6.5.2"
+          "revision": "80963d4317bcdc03891e0fbaa744f20511d1bc08",
+          "version": "6.12.0"
+        }
+      },
+      {
+        "package": "swift-log",
+        "repositoryURL": "https://github.com/apple/swift-log.git",
+        "state": {
+          "branch": null,
+          "revision": "74d7b91ceebc85daf387ebb206003f78813f71aa",
+          "version": "1.2.0"
         }
       },
       {
@@ -33,17 +42,17 @@
         "repositoryURL": "https://github.com/SwiftyBeaver/SwiftyBeaver.git",
         "state": {
           "branch": null,
-          "revision": "562a81878674cc8bd74efab274776c35d2519d04",
-          "version": "1.6.1"
+          "revision": "2f2b7ac0b675e9d0ac696758f15bbff97eb65a31",
+          "version": "1.8.4"
         }
       },
       {
         "package": "SwiftyRequest",
         "repositoryURL": "https://github.com/IBM-Swift/SwiftyRequest.git",
         "state": {
-          "branch": "master",
-          "revision": "4f6584cefffa263bf19c9ff58d0dcbb937f7fb23",
-          "version": null
+          "branch": null,
+          "revision": "7714415e171964870f303644ab12e8539ea2f4fd",
+          "version": "2.2.1"
         }
       }
     ]

@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "OtaDeployState",
     dependencies: [
-        .package(url: "https://github.com/IBM-Swift/SwiftyRequest.git", .branch("master")),
+        .package(url: "https://github.com/IBM-Swift/SwiftyRequest.git", .upToNextMajor(from: "2.2.1")),
         .package(url: "https://github.com/mxcl/PromiseKit.git", .upToNextMajor(from: "6.0.0")),
         .package(url: "https://github.com/SwiftyBeaver/SwiftyBeaver.git", .upToNextMajor(from: "1.0.0")),
         // Dependencies declare other packages that this package depends on.
